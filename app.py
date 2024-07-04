@@ -6,9 +6,6 @@ from langdetect import detect
 from google.oauth2 import service_account
 from google.cloud import speech
 
-
-
-
 app = Flask(__name__)
 
 # Path to your Google Cloud service account key file

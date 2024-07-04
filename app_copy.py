@@ -5,7 +5,7 @@ from googletrans import Translator
 from langdetect import detect
 from google.oauth2 import service_account
 from google.cloud import speech
-import websockets
+
 
 
 

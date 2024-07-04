@@ -74,7 +74,7 @@
         async function sendAudioChunksLoop() {
             while (recording) {
                 console.log('Waiting to send audio chunks...');
-                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds
+                await new Promise(resolve => setTimeout(resolve, 10000)); // Wait for 5 seconds
                 console.log('Sending audio chunks...');
                 mediaRecorder.stop(); // This will trigger the 'stop' event, sending chunks and restarting recording
             }
