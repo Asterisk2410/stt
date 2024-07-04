@@ -1,0 +1,499 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Translator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 80%;
+            height: 200px;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <button onclick="startRecording()">Start Recording</button>
+    <textarea id="result" placeholder="Translated text will appear here..."></textarea>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        async function startRecording() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Your browser does not support recording audio.');
+                return;
+            }
+
+            try {
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 48000 } });
+                const options = { mimeType: 'audio/webm;codecs=opus' }; // WebM Opus format for recording
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                mediaRecorder.start();
+
+                mediaRecorder.addEventListener("dataavailable", event => {
+                    audioChunks.push(event.data);
+                });
+
+                mediaRecorder.addEventListener("stop", () => {
+                    let audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+                    let formData = new FormData();
+                    formData.append('file', audioBlob);
+
+                    fetch('/process_audio', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            document.getElementById('result').value = data.error;
+                        } else {
+                            document.getElementById('result').value = `Transcript: ${data.transcript}\nTranslation: ${data.translation}`;
+                        }
+                    });
+
+                    audioChunks = [];
+                });
+
+                setTimeout(() => {
+                    mediaRecorder.stop();
+                }, 5000); // Stop recording after 5 seconds
+            } catch (err) {
+                console.error('Error accessing media devices:', err);
+                alert('Error accessing media devices. Please ensure microphone access.');
+            }
+        }
+    </script>
+</body>
+</html> -->
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Translator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 80%;
+            height: 200px;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <button id="recordButton" onclick="startRecording()">Start Recording</button>
+    <button id="stopButton" onclick="stopRecording()">Stop Recording</button>
+    <textarea id="result" placeholder="Translated text will appear here..."></textarea>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let recording = false;
+        let sendInterval;
+
+        async function startRecording() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Your browser does not support recording audio.');
+                return;
+            }
+
+            try {
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const options = { mimeType: 'audio/webm;codecs=opus' };
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                mediaRecorder.start();
+                recording = true;
+                document.getElementById('recordButton').disabled = true; // Disable the button after starting recording
+
+                mediaRecorder.addEventListener("dataavailable", event => {
+                    audioChunks.push(event.data);
+                });
+
+                // Start sending audio chunks every 10 seconds
+                interval = setInterval(sendAudioChunks, 10000);
+
+            } catch (err) {
+                console.error('Error accessing media devices:', err);
+                alert('Error accessing media devices. Please ensure microphone access.');
+            }
+        }
+
+        async function sendAudioChunksLoop() {
+            while (recording) {
+                console.log('Waiting to send audio chunks...');
+                await new Promise(resolve => setTimeout(resolve, 10000)); // Wait for 10 seconds
+                console.log('Sending audio chunks...');
+                mediaRecorder.state(); // This will trigger the 'stop' event, sending chunks and restarting recording
+            }
+        }
+
+        async function sendAudioChunks() {
+            if (audioChunks.length > 0) {
+                let audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+                let formData = new FormData();
+                formData.append('file', audioBlob);
+
+                try {
+                    let response = await fetch('/process_audio', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    let data = await response.json();
+                    if (data.error) {
+                        document.getElementById('result').value = data.error;
+                    } else {
+                        document.getElementById('result').value = `Transcript: ${data.transcript}\nTranslation: ${data.translation}`;
+                    }
+                } catch (error) {
+                    console.error('Error sending audio data:', error);
+                }
+
+                audioChunks = []; // Clear the audio chunks after sending
+            }
+        }
+
+        function stopRecording() {
+            recording = false;
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                clearInterval(sendInterval);
+                document.getElementById('recordButton').disabled = false; // Re-enable the button after stopping recording
+            }
+        }
+    </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Teleprompter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 80%;
+            height: 300px;
+            padding: 10px;
+            font-size: 16px;
+            overflow-y: scroll; /* Enable scrolling for long content */
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <button id="recordButton" onclick="startRecording()">Start Recording</button>
+    <button id="stopButton" onclick="stopRecording()">Stop Recording</button>
+
+    <textarea id="result" placeholder="Translated text will appear here..."></textarea>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let recording = false;
+
+        async function startRecording() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Your browser does not support recording audio.');
+                return;
+            }
+
+            try {
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const options = { mimeType: 'audio/webm;codecs=opus' }; // WebM Opus format for recording
+                
+                console.log('Starting recording...');
+                mediaRecorder = new MediaRecorder(stream, options);
+                mediaRecorder.start();
+                console.log('media recorder started');
+                recording = true;
+                document.getElementById('recordButton').disabled = true; // Disable the button after starting recording
+
+                mediaRecorder.addEventListener("dataavailable", event => {
+                    audioChunks.push(event.data);
+                });
+
+                mediaRecorder.addEventListener("stop", () => {
+                    sendAudioChunks(); // Send the collected chunks
+                });
+
+                // Start the loop
+                sendAudioChunksLoop();
+
+            } catch (err) {
+                console.error('Error accessing media devices:', err);
+                alert('Error accessing media devices. Please ensure microphone access.');
+            }
+        }
+
+        async function sendAudioChunksLoop() {
+            while (recording) {
+                console.log('Waiting to send audio chunks...');
+                await new Promise(resolve => setTimeout(resolve, 10000)); // Wait for 10 seconds
+                console.log('Sending audio chunks...');
+                sendAudioChunks(); // Send the collected chunks
+            }
+        }
+
+        async function sendAudioChunks() {
+            if (audioChunks.length > 0) {
+                let audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+                let formData = new FormData();
+                formData.append('file', audioBlob);
+
+                try {
+                    let response = await fetch('/process_audio', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    let data = await response.json();
+                    if (data.error) {
+                        console.error('Error:', data.error);
+                    } else {
+                        // Append new transcription to the textarea (real-time display)
+                        let resultTextarea = document.getElementById('result');
+                        resultTextarea.value += `Transcript: ${data.transcript}\nTranslation: ${data.translation}\n\n`;
+                        resultTextarea.scrollTop = resultTextarea.scrollHeight; // Auto-scroll to bottom
+                    }
+                } catch (error) {
+                    console.error('Error sending audio data:', error);
+                }
+
+                audioChunks = []; // Clear the audio chunks after sending
+            }
+            else {
+                console.log('No audio chunks to send.');
+            }
+        }
+
+        function stopRecording() {
+            recording = false;
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                document.getElementById('recordButton').disabled = false; // Re-enable the button after stopping recording
+            }
+        }
+    </script>
+</body>
+</html> 
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Speech Translator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 80%;
+            height: 300px;
+            padding: 10px;
+            font-size: 16px;
+            overflow-y: scroll; /* Enable scrolling for long content */
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <button id="recordButton" onclick="startRecording()">Start Recording</button>
+    <button id="stopButton" onclick="stopRecording()">Stop Recording</button>
+    <textarea id="result" placeholder="Translated text will appear here..."></textarea>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script>
+        const socket = io.connect('http://' + document.domain + ':' + location.port);
+        console.log(socket);
+        let mediaRecorder;
+        let recording = false;
+
+        async function startRecording() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Your browser does not support recording audio.');
+                return;
+            }
+
+            try {
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const options = { mimeType: 'audio/webm;codecs=opus' };
+                
+                mediaRecorder = new MediaRecorder(stream, options);
+                mediaRecorder.start();
+                console.log('media recorder started');
+                recording = true;
+                document.getElementById('recordButton').disabled = true;
+
+                mediaRecorder.addEventListener("dataavailable", event => {
+                    if (recording) {
+                        socket.emit('audio_data', event.data);
+                    }
+                });
+                console.log('here')
+                socket.emit('start_audio_stream'); // Example: translating to French
+
+            } catch (err) {
+                console.error('Error accessing media devices:', err);
+                alert('Error accessing media devices. Please ensure microphone access.');
+            }
+        }
+
+        function stopRecording() {
+            recording = false;
+            mediaRecorder.stop();
+            document.getElementById('recordButton').disabled = false;
+        }
+
+        socket.on('translated_text', data => {
+            let resultTextarea = document.getElementById('result');
+            resultTextarea.value += `Transcript: ${data.transcript}\nTranslation: ${data.translation}\n\n`;
+            resultTextarea.scrollTop = resultTextarea.scrollHeight;
+        });
+    </script>
+</body>
+</html> 
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Speech Translator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 80%;
+            height: 300px;
+            padding: 10px;
+            font-size: 16px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <button id="recordButton" onclick="startRecording()">Start Recording</button>
+    <button id="stopButton" onclick="stopRecording()" disabled>Stop Recording</button>
+    <textarea id="result" placeholder="Translated text will appear here..."></textarea>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script>
+        const socket = io.connect('http://' + document.domain + ':' + location.port);
+        let mediaRecorder;
+        let recording = false;
+
+        async function startRecording() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Your browser does not support recording audio.');
+                return;
+            }
+
+            try {
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const options = { mimeType: 'audio/webm;codecs=opus' };
+                
+                mediaRecorder = new MediaRecorder(stream, options);
+                mediaRecorder.start(10000); // Collect audio data every 100ms
+                recording = true;
+                document.getElementById('recordButton').disabled = true;
+                document.getElementById('stopButton').disabled = false;
+                console.log('media recorder started');
+
+                mediaRecorder.addEventListener("dataavailable", event => {
+                    if (recording) {
+                        socket.emit('audio_data', event.data);
+                    }
+                });
+                console.log('here')
+                socket.emit('start_audio_stream');
+
+            } catch (err) {
+                console.error('Error accessing media devices:', err);
+                alert('Error accessing media devices. Please ensure microphone access.');
+            }
+        }
+
+        function stopRecording() {
+            recording = false;
+            mediaRecorder.stop();
+            document.getElementById('recordButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
+        }
+
+        socket.on('translated_text', data => {
+            let resultTextarea = document.getElementById('result');
+            resultTextarea.value += `Transcript: ${data.transcript}\nTranslation: ${data.translation}\n\n`;
+            resultTextarea.scrollTop = resultTextarea.scrollHeight;
+        });
+    </script>
+</body>
+</html>
+
+-->
