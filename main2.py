@@ -43,7 +43,7 @@ def record_audio():
     return b''.join(frames)
 
 def audio_file():
-    audio_file = r"russian audio.mp3"
+    audio_file = r"audio/russian audio.mp3"
     with io.open(audio_file, 'rb') as audio_file:
         content = audio_file.read()
     return content
@@ -79,7 +79,7 @@ def main():
     transcript, confidence = transcribe_audio(audio_content, "ar-AE")
     # print(f"Transcript: {transcript}")
     
-    if confidence < 0.85:
+    if confidence < 0.8:
         transcript, confidence = transcribe_audio(audio_content, "ru-RU")
 
     if transcript.strip():
