@@ -44,6 +44,7 @@ def record_audio():
 
 def audio_file():
     audio_file = r"audio/russian audio.mp3"
+    # audio_file = r"audio/arabic audio.mp3"
     with io.open(audio_file, 'rb') as audio_file:
         content = audio_file.read()
     return content
@@ -61,7 +62,6 @@ def transcribe_audio(audio_content, language_code):
     confidence = 0.0
     print("response:", response)
 
-    transcript = ""
     for result in response.results:
         transcript += result.alternatives[0].transcript
         confidence = result.alternatives[0].confidence
@@ -89,10 +89,14 @@ def main():
 
         if detected_language == 'ar':
             translated_text = translate_text(transcript, 'ru')
+            english_subtitles = translate_text(translated_text, 'en')
             print(f"Output Text: {translated_text}")
+            print(f"English Subtitles: {english_subtitles}")
         elif detected_language == 'ru':
             translated_text = translate_text(transcript, 'ar')
+            english_subtitles = translate_text(translated_text, 'en')
             print(f"Output Text: {translated_text}")
+            print(f"English Subtitles: {english_subtitles}")
         else:
             print("Unsupported language detected")
             return
