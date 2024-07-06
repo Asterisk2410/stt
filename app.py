@@ -56,7 +56,7 @@ def process_audio():
             
             transcript, confidence = transcribe_audio(audio_content, "en-US")
 
-            if confidence < 0.7:
+            if confidence < 0.85:
                 transcript, confidence = transcribe_audio(audio_content, "fr-FR")
 
             if transcript.strip():

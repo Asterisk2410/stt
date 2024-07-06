@@ -39,7 +39,7 @@ def record_audio():
     stream.stop_stream()
     stream.close()
     p.terminate()
-    print(b''.join(frames))
+    # print(b''.join(frames))
     return b''.join(frames)
 
 def audio_file():
