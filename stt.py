@@ -1,11 +1,12 @@
-
 import queue
 import re
 import sys
 import time
-
+from google.oauth2 import service_account
 from google.cloud import speech
 import pyaudio
+from googletrans import Translator
+import torch
 
 # Audio recording parameters
 STREAMING_LIMIT = 240000  # 4 minutes
@@ -24,7 +25,7 @@ def get_current_time() -> int:
         int: Current Time in MS.
     """
 
-    return int(round(time.time() * 1000))
+    return int(round(time.time()))
 
 
 class ResumableMicrophoneStream:
@@ -239,14 +240,48 @@ def listen_print_loop(responses: object, stream: object) -> None:
         )
         # Display interim results, but with a carriage return at the end of the
         # line, so subsequent lines will overwrite them.
+        
+        ### TRANSLATION LOGIC :: v1 - Working ###
+        # translator = Translator()
+        # translate = translator.translate(transcript, dest='fr')
+        # if translate.text == "":
+        #     translate = translator.translate(transcript, dest='en')
+
+        # print(translate.text)
+        ### TRANSLATION LOGIC ###
+
+        ### TRANSLATION LOGIC :: v2 ###
+        try:
+            translator = Translator()
+            translate = translator.translate(transcript, dest='fr')
+            if translate.text == "":
+                translate = translator.translate(transcript, dest='en')
+            else:
+                translated_text = translate.text
+        except Exception as e:
+            print(f"Translation error: {e}")
+            translated_text = transcript
+        ### TRANSLATION LOGIC :: v2 ###
 
         if result.is_final:
             sys.stdout.write(GREEN)
             sys.stdout.write("\033[K")
             sys.stdout.write(str(corrected_time) + ": " + transcript + "\n")
-
+            
+            ### Translation Logic printing ###
+            # sys.stdout.write('Translation: ' +translate.text + "\n")
+            # print(translate.text)
+            
+            # sys.stdout.write('Translation: ' +translated_text + "\n")
+            # print(translated_text)
+            
             stream.is_final_end_time = stream.result_end_time
             stream.last_transcript_was_final = True
+            
+            # sys.stdout.write('Translation: ' +translated_text + "\n")
+            
+
+            ### Translation Logic printing ###
 
             # Exit recognition if any of the transcribed phrases could be
             # one of our keywords.
@@ -261,12 +296,16 @@ def listen_print_loop(responses: object, stream: object) -> None:
             sys.stdout.write(str(corrected_time) + ": " + transcript + "\r")
 
             stream.last_transcript_was_final = False
-
+        
+        if stream.last_transcript_was_final == True:    
+            sys.stdout.write('Translation: ' +translated_text + "\n")
+            print(translated_text)
 
 def main() -> None:
     """start bidirectional streaming from microphone input to speech API"""
-    
-    client = speech.SpeechClient()
+    client_file = "speech_to_text_cred.json"
+    credentials = service_account.Credentials.from_service_account_file(client_file)
+    client = speech.SpeechClient(credentials=credentials)
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=SAMPLE_RATE,
@@ -319,4 +358,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print("Using", torch.cuda.get_device_name(0))
+    else:
+        device = torch.device("cpu")
+        print("Using CPU")
     main()

@@ -13,9 +13,9 @@
             margin-top: 50px;
         }
         button {
-            padding: 10px 20px;
+            padding: 2px 5px;
             font-size: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 5px;
         }
         textarea {
             width: 80%;
@@ -23,12 +23,30 @@
             padding: 10px;
             font-size: 16px;
         }
+        .red-circle {
+            width: 5px;
+            height: 5px;
+            background-color: red;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .black-square {
+            width: 15px;
+            height: 15px;
+            background-color: black;
+            display: inline-block;
+        }
+        
     </style>
 </head>
 <body>
-    <button id="recordButton" onclick="startRecording()">Start Recording</button>
-    <button id="stopButton" onclick="stopRecording()">Stop Recording</button>
-
+    <button id="recordButton" onclick="startRecording()">
+        <div class="red-circle"></div>
+    </button>
+    <!-- <button id="stopButton" onclick="stopRecording()">
+        <div class="black-square"></div>
+    </button> -->
+    
     <textarea id="result" placeholder="Translated text will appear here..."></textarea>
 
     <script>
@@ -49,7 +67,7 @@
                 mediaRecorder = new MediaRecorder(stream, options);
                 mediaRecorder.start();
                 recording = true;
-                document.getElementById('recordButton').disabled = true; // Disable the button after starting recording
+                document.getElementById('recordButton').style.display = 'none';
 
                 mediaRecorder.addEventListener("dataavailable", event => {
                     audioChunks.push(event.data);
@@ -74,7 +92,7 @@
         async function sendAudioChunksLoop() {
             while (recording) {
                 console.log('Waiting to send audio chunks...');
-                await new Promise(resolve => setTimeout(resolve, 10000)); // Wait for 5 seconds
+                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds
                 console.log('Sending audio chunks...');
                 mediaRecorder.stop(); // This will trigger the 'stop' event, sending chunks and restarting recording
             }
@@ -115,4 +133,180 @@
         }
     </script>
 </body>
+</html> 
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Translator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 2px 5px;
+            font-size: 8px;
+            margin-bottom: 5px;
+        }
+        textarea {
+            width: 80%;
+            height: 200px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .red-circle {
+            width: 5px;
+            height: 5px;
+            background-color: red;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .black-square {
+            width: 15px;
+            height: 15px;
+            background-color: black;
+            display: inline-block;
+        }
+        .hidden {
+            display: none;
+        }
+        .files{
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <button id="recordButton" onclick="startRecording()">
+        <div class="red-circle"></div>
+    </button>
+    <button id="stopButton" class="hidden" onclick="stopRecording()">
+        <div class="black-square"></div>
+    </button>
+
+    <textarea id="result" placeholder="Translated text will appear here..."></textarea>
+
+    <div class="files">
+        <input type="file" id="audioFileInput" accept="audio/*">
+    <button onclick="uploadAudio()">Upload Audio</button>
+    </div>
+    
+    
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let recording = false;
+
+        async function startRecording() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Your browser does not support recording audio.');
+                return;
+            }
+
+            try {
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const options = { mimeType: 'audio/webm;codecs=opus' };
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                mediaRecorder.start();
+                recording = true;
+                document.getElementById('recordButton').style.display = 'none';
+
+                mediaRecorder.addEventListener("dataavailable", event => {
+                    audioChunks.push(event.data);
+                });
+
+                mediaRecorder.addEventListener("stop", async () => {
+                    if (recording) {
+                        await sendAudioChunks();
+                        mediaRecorder.start();
+                    }
+                });
+
+                sendAudioChunksLoop();
+
+            } catch (err) {
+                console.error('Error accessing media devices:', err);
+                alert('Error accessing media devices. Please ensure microphone access.');
+            }
+        }
+
+        async function sendAudioChunksLoop() {
+            while (recording) {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                mediaRecorder.stop();
+            }
+        }
+
+        async function sendAudioChunks() {
+            if (audioChunks.length > 0) {
+                let audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+                let formData = new FormData();
+                formData.append('file', audioBlob);
+
+                try {
+                    let response = await fetch('/process_audio', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    let data = await response.json();
+                    if (data.error) {
+                        document.getElementById('result').value = data.error;
+                    } else {
+                        document.getElementById('result').value = `Transcript: ${data.transcript}\nTranslation: ${data.translation}`;
+                    }
+                } catch (error) {
+                    console.error('Error sending audio data:', error);
+                }
+
+                audioChunks = [];
+            }
+        }
+
+        function stopRecording() {
+            recording = false;
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                document.getElementById('recordButton').classList.remove('hidden');
+                document.getElementById('stopButton').classList.add('hidden');
+            }
+        }
+
+        async function uploadAudio() {
+            const fileInput = document.getElementById('audioFileInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                let formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    let response = await fetch('/process_audio', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    let data = await response.json();
+                    if (data.error) {
+                        document.getElementById('result').value = data.error;
+                    } else {
+                        document.getElementById('result').value = `Transcript: ${data.transcript}\nTranslation: ${data.translation}`;
+                    }
+                } catch (error) {
+                    console.error('Error sending audio data:', error);
+                }
+            } else {
+                alert('Please select an audio file to upload.');
+            }
+        }
+    </script>
+</body>
 </html>
+-->

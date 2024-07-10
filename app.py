@@ -82,20 +82,92 @@ def process_audio():
 if __name__ == '__main__':
     app.run(debug=True)
 
+# import base64
+# import io
+# from flask import Flask, request, jsonify, render_template
+# from googletrans import Translator
+# from langdetect import detect
+# from google.oauth2 import service_account
+# from google.cloud import speech
 
+# app = Flask(__name__)
 
+# # Path to your Google Cloud service account key file
+# client_file = "speech_to_text_cred.json"
+# credentials = service_account.Credentials.from_service_account_file(client_file)
+# client = speech.SpeechClient(credentials=credentials)
 
-'''
-# `pip3 install assemblyai` (macOS)
-# `pip install assemblyai` (Windows)
+# RATE = 48000  # Set the sample rate to 48000
+# WAV_RATE = 44100  # Set the sample rate for WAV files
 
-import assemblyai as aai
+# def transcribe_audio(audio_content, language_code, encoding, sample_rate_hertz):
+#     audio = speech.RecognitionAudio(content=audio_content)
+#     config = speech.RecognitionConfig(
+#         encoding=encoding,
+#         sample_rate_hertz=sample_rate_hertz,
+#         language_code=language_code,
+#     )
 
-aai.settings.api_key = "0c681f6e430140a5a722715fcbcf6485"
-transcriber = aai.Transcriber()
+#     response = client.recognize(config=config, audio=audio)
+#     transcript = ""
+#     confidence = 0.0
 
-transcript = transcriber.transcribe("https://storage.googleapis.com/aai-web-samples/news.mp4")
-# transcript = transcriber.transcribe("./my-local-audio-file.wav")
+#     if response.results:
+#         for result in response.results:
+#             transcript += result.alternatives[0].transcript
+#             confidence = result.alternatives[0].confidence
+#     return transcript, confidence
 
-print(transcript.text)
-'''
+# def translate_text(text, dest_language):
+#     translator = Translator()
+#     translation = translator.translate(text, dest=dest_language)
+#     return translation.text
+
+# @app.route('/')
+# def index():
+#     return render_template('index.html')
+
+# @app.route('/process_audio', methods=['POST'])
+# def process_audio():
+#     try:
+#         audio_file = request.files['file']
+#         audio_content = audio_file.read()
+#         if audio_file.filename == '':
+#             return jsonify({"error": "No audio file selected"})
+
+#         transcript = ""
+#         confidence = 0.0
+
+#         # Determine the content type and set appropriate encoding
+#         if audio_file.content_type == 'audio/webm;codecs=opus':
+#             transcript, confidence = transcribe_audio(audio_content, "en-US", speech.RecognitionConfig.AudioEncoding.WEBM_OPUS, RATE)
+#         elif audio_file.content_type == 'audio/wav':
+#             transcript, confidence = transcribe_audio(audio_content, "en-US", speech.RecognitionConfig.AudioEncoding.LINEAR16, WAV_RATE)
+#         else:
+#             return jsonify({'error': 'Unsupported file type'})
+
+#         if confidence < 0.85:
+#             if audio_file.content_type == 'audio/webm;codecs=opus':
+#                 transcript, confidence = transcribe_audio(audio_content, "fr-FR", speech.RecognitionConfig.AudioEncoding.WEBM_OPUS, RATE)
+#             elif audio_file.content_type == 'audio/wav':
+#                 transcript, confidence = transcribe_audio(audio_content, "fr-FR", speech.RecognitionConfig.AudioEncoding.LINEAR16, WAV_RATE)
+
+#         if transcript.strip():
+#             detected_language = detect(transcript)
+#             if detected_language == 'en':
+#                 translated_text = translate_text(transcript, 'fr')
+#             elif detected_language == 'fr':
+#                 translated_text = translate_text(transcript, 'en')
+#             else:
+#                 return jsonify({"error": "Unsupported language detected"})
+#         else:
+#             return jsonify({"error": "No text detected"})
+
+#         return jsonify({"transcript": transcript, "translation": translated_text})
+
+#     except Exception as e:
+#         print(f"Error processing audio: {str(e)}")
+#         return jsonify({'error': f'Error processing audio: {str(e)}'})
+
+# if __name__ == '__main__':
+#     app.run(debug=True)

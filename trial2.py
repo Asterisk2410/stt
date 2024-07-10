@@ -3,6 +3,12 @@ import numpy as np
 from transformers import AutoProcessor, SeamlessM4TModel
 import torchaudio
 import time
+import torch
+
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
 
 # Initialize the processor and model
 processor = AutoProcessor.from_pretrained("facebook/hf-seamless-m4t-large")
